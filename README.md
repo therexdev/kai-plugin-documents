@@ -6,8 +6,9 @@ Local writing workspace for KAI Core 0.2.0. Opens the existing `core/docs` docum
 
 - Search, create, edit, save, and delete plain-text/Markdown documents.
 - Import text or Markdown through a native file picker and export through a native save dialog.
-- Generate local AI writing proposals with an installed model.
-- Review a proposal, explicitly apply it to the editor, then save it. Generation never silently modifies a saved document.
+- Use the original document sidebar, writing canvas, and inline AI toolbar.
+- Improve, fix grammar, shorten, expand, continue, or give a custom instruction using an installed local model. Select text to work on one passage; leave it unselected to use the whole document.
+- Review a proposal, explicitly apply it to the editor, then save it. Generation never silently modifies a saved document. Suggestions cannot overwrite newer text edited while the model was working.
 - Atomic saves and revision checks protect against stale overwrites. Unreadable or symlinked files are reported and preserved.
 
 This version edits text/Markdown; it does not import Word/PDF formats, render arbitrary HTML, sync cloud drives, or send document content to network models. Draft instructions and included context are limited to 15,000 characters combined; document storage supports up to one million characters.

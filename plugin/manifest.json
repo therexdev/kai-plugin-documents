@@ -1,1 +1,17 @@
-{"schema":1,"apiVersion":2,"id":"kai.documents","version":"0.1.0","name":"Documents","description":"Write, organize and revise your local documents. Includes local AI drafting and native text import/export.","entry":"index.html","permissions":["models.read","documents.read","documents.write","documents.import","documents.export","documents.draft"]}
+{
+  "schema": 1,
+  "apiVersion": 2,
+  "id": "kai.documents",
+  "version": "0.1.1",
+  "name": "Documents",
+  "description": "Write, organize and revise your local documents. Includes local AI drafting and native text import/export.",
+  "entry": "index.html",
+  "permissions": [
+    "models.read",
+    "documents.read",
+    "documents.write",
+    "documents.import",
+    "documents.export",
+    "documents.draft"
+  ]
+}
