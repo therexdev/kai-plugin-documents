@@ -1,0 +1,2 @@
+# Signed source and verifier receipts must keep identical bytes on every OS.
+* -text
