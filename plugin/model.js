@@ -1,0 +1,2 @@
+"use strict";
+(function(root){const api={filterDocuments(rows,query){const q=String(query||"").trim().toLowerCase();return rows.filter(d=>!q||`${d.title} ${d.preview}`.toLowerCase().includes(q));},wordCount(value){const t=String(value||"").trim();return t?t.split(/\s+/).length:0;},applyProposal(doc,proposal){if(typeof proposal!=="string"||proposal.length>1000000)throw Error("Invalid proposed draft");return {...doc,content:proposal};}};if(typeof module==="object")module.exports=api;else root.DocumentModel=api;})(typeof window==="undefined"?globalThis:window);
