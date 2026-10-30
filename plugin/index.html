@@ -1,11 +1,41 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documents</title><link rel="stylesheet" href="kai-theme.css"><link rel="stylesheet" href="style.css"></head>
-<body>
-<header class="workspace-header"><div class="workspace-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H5v18h14V8ZM14 3v5h5M8 12h8M8 16h6"/></svg><h1>Documents</h1></div><div class="actions"><button type="button" id="export">Export</button><button type="button" id="remove" class="danger">Delete</button><button class="primary" id="save" type="submit" form="document-form">Save</button></div></header>
-<div id="message" role="status" hidden></div>
-<div class="docs-layout">
-<aside class="docs-side"><div class="docs-side-head"><span>Documents</span><button id="new" class="linklike">+ New</button></div><label class="sr-only" for="search">Find a document</label><input id="search" type="search" placeholder="Find a document…"><div id="list" aria-label="Saved documents"></div><div class="docs-side-footer"><span id="count" class="muted"></span><button id="import" class="linklike">Import text</button></div></aside>
-<main class="docs-main"><form id="document-form"><label for="title" class="sr-only">Document title</label><input id="title" maxlength="200" placeholder="Title"><label for="content" class="sr-only">Document</label><textarea id="content" maxlength="1000000" placeholder="Write here. Select some text (or nothing, for the whole document) and use the AI bar below — suggestions preview first, and only Apply changes your words." spellcheck="true"></textarea><div class="docs-status"><span id="status" role="status"></span></div></form>
-<details id="assistant" open><summary class="sr-only">Write with local AI</summary><div class="docs-ai-bar"><label class="sr-only" for="model">Model for suggestions</label><select id="model" title="Model for suggestions"></select><button class="doc-act" data-action="improve">Improve</button><button class="doc-act" data-action="grammar">Fix grammar</button><button class="doc-act" data-action="shorten">Shorten</button><button class="doc-act" data-action="expand">Expand</button><button class="doc-act" data-action="continue">Continue</button><label class="sr-only" for="prompt">Custom writing instruction</label><input id="prompt" maxlength="12000" placeholder="…or tell it what to do (e.g. “make this friendlier”)"><button id="draft" class="doc-act">Go</button></div><p id="draft-status" class="muted" role="status">Suggestions use a local model. Apply, then Save, to keep your changes.</p></details>
-<section id="proposal" hidden><div class="doc-suggest-head"><span id="proposal-label">Suggestion</span><span id="proposal-target" class="muted"></span><button type="button" id="close-proposal" class="close-button" aria-label="Dismiss suggestion" title="Dismiss suggestion"><span aria-hidden="true">×</span></button></div><pre id="draft-text"></pre><div class="doc-suggest-actions"><button id="apply-draft" class="primary">Apply</button><button id="discard-draft">Discard</button></div></section>
-</main></div><script src="kai-notices.js"></script><script src="model.js"></script><script src="app.js"></script></body></html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Documents</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="product-experience.css"><link rel="stylesheet" href="plugin-shell.css"></head>
+<body class="product-v2"><main id="plugin-workspace">
+      <section id="view-docs" class="view">
+        <div class="docs-layout">
+          <aside class="docs-side">
+            <div class="docs-side-head"><span>Documents</span><button id="btn-new-doc" class="linklike">+ New</button></div>
+            <div class="docs-file-actions"><button id="doc-import" class="linklike">Import</button><button id="doc-export" class="linklike">Export</button></div><div id="doc-list"></div>
+          </aside>
+          <div class="docs-main">
+            <input id="doc-title" placeholder="Title" maxlength="80" />
+            <textarea id="doc-body" placeholder="Write here. Select some text (or nothing, for the whole document) and use the AI bar below — suggestions preview first, and only Apply changes your words." spellcheck="true"></textarea>
+            <div class="docs-status"><span id="doc-words"></span><span id="doc-saved"></span></div>
+            <div class="docs-ai-bar">
+              <select id="doc-model" title="Model for suggestions"></select>
+              <button class="doc-act" data-act="improve">Improve</button>
+              <button class="doc-act" data-act="grammar">Fix grammar</button>
+              <button class="doc-act" data-act="shorten">Shorten</button>
+              <button class="doc-act" data-act="expand">Expand</button>
+              <button class="doc-act" data-act="continue">Continue</button>
+              <input id="doc-custom" placeholder="…or tell it what to do (e.g. “make this friendlier”)" />
+              <button id="doc-custom-go" class="doc-act">Go</button>
+            </div>
+            <div id="doc-suggest" hidden>
+              <div class="doc-suggest-head"><span id="doc-suggest-label">Suggestion</span><span id="doc-suggest-target" class="hint"></span></div>
+              <div id="doc-suggest-body"></div>
+              <div class="doc-suggest-actions">
+                <button id="doc-apply" class="primary small">Apply</button>
+                <button id="doc-discard" class="doc-act">Discard</button>
+                <button id="doc-suggest-stop" class="doc-act" hidden>Stop</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+</main>
+<script src="locales/catalogs.js"></script>
+<script src="i18n.js"></script>
+<script src="bridge.js"></script>
+<script src="app.js"></script>
+</body></html>

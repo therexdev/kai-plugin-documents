@@ -2,9 +2,9 @@
   "schema": 1,
   "apiVersion": 2,
   "id": "kai.documents",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "name": "Documents",
-  "description": "Write, organize and revise your local documents. Includes local AI drafting and native text import/export.",
+  "description": "The original local writing workspace with autosave, selection-aware AI edits, streamed suggestions, Apply/Discard/Stop, and native document import/export.",
   "entry": "index.html",
   "permissions": [
     "models.read",
@@ -12,6 +12,7 @@
     "documents.write",
     "documents.import",
     "documents.export",
-    "documents.draft"
+    "documents.draft",
+    "desktop.preferences"
   ]
 }

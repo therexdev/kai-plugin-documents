@@ -1,20 +1,13 @@
 # KAI Documents plugin
 
-Local writing workspace for KAI Core 0.2.0. Opens the existing `core/docs` document files created by Alpha/Test, preserving their IDs and creation dates.
+The original Documents writing workspace, installed separately in KAI Core. It retains the document rail, title and writing canvas, automatic saving, word count, model selector, and the original Improve, Fix grammar, Shorten, Expand, Continue and custom-instruction actions.
 
-## Available now
+Select a passage to revise only that passage, or leave it unselected to revise the document. Suggestions stream into the original preview with Apply, Discard and Stop controls. Generation does not modify the document. Apply updates the selected passage and autosaves; a suggestion cannot overwrite text edited after it began. Native text/Markdown import and export are also retained.
 
-- Search, create, edit, save, and delete plain-text/Markdown documents.
-- Import text or Markdown through a native file picker and export through a native save dialog.
-- Use the original document sidebar, writing canvas, and inline AI toolbar.
-- Improve, fix grammar, shorten, expand, continue, or give a custom instruction using an installed local model. Select text to work on one passage; leave it unselected to use the whole document.
-- Review a proposal, explicitly apply it to the editor, then save it. Generation never silently modifies a saved document. Suggestions cannot overwrite newer text edited while the model was working.
-- Atomic saves and revision checks protect against stale overwrites. Unreadable or symlinked files are reported and preserved.
+Existing documents keep their original `core/docs` files, IDs and creation dates. Atomic saves retain a revision fence, reject concurrent changes and preserve unreadable files. Serial autosaves and generation checks prevent a delayed response from changing the wrong document when switching pages or typing during a save.
 
-This version edits text/Markdown; it does not import Word/PDF formats, render arbitrary HTML, sync cloud drives, or send document content to network models. Draft instructions and included context are limited to 15,000 characters combined; document storage supports up to one million characters.
+The original renderer talks to its publisher-pinned Documents broker rather than an unrestricted HTTP API. The broker retains the original model streaming route while document reads and writes use guarded storage. It never exposes wallet keys or connected account credentials. Interface language follows the original Core preference.
 
-## Installation and permissions
+Run `npm test` for transport, revision and streaming cancellation tests. Core owns storage/inference integration tests and native sandboxed UI scenarios. Synthetic tests do not submit real model jobs or access user documents.
 
-Install the signed `.kaiplugin` release through KAI Core. The reviewed publisher pin is required for private `documents.*` capabilities. The renderer uses the allowlisted host broker and never receives Node, filesystem paths, wallet keys, or account credentials. Local inference requires an installed model and the model-list permission.
-
-Run `npm test` for the document model tests. Broker integration tests live in `kai-core/core/test-core/private-data-services.test.js`. Signing and release packaging are managed from the Core workspace; publisher private keys must never enter this repository.
+Original UI source baseline: `therexdev/kaiapp` commit `34d17faa0526213b8fc0ac7a65aa7f2c186c6547`, the Documents portion of `ui/docs-view.js`, the `view-docs` section of `ui/index.html`, `ui/styles.css`, and `ui/product-experience.css`. The extracted renderer retains its original controls and behavior, with save/lifetime guards around asynchronous work.

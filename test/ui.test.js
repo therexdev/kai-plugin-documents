@@ -1,55 +1,8 @@
 "use strict";
-const { test } = require("node:test"), assert = require("node:assert/strict"), fs = require("node:fs"), path = require("node:path"), vm = require("node:vm");
-const source = fs.readFileSync(path.join(__dirname, "../plugin/app.js"), "utf8");
-const html = fs.readFileSync(path.join(__dirname, "../plugin/index.html"), "utf8");
-const flush = async () => { for (let i = 0; i < 4; i++) await new Promise(resolve => setImmediate(resolve)); };
-function fixture() {
-  const elements = new Map(), calls = [], messages = [];
-  let resolveGet;
-  const saved = [{ id: "first", revision: "first-revision", title: "First document", content: "First saved text", words: 3 }, { id: "second", revision: "second-revision", title: "Second document", content: "Second saved text", words: 3 }];
-  function element(tagName = "div") {
-    return { tagName, value: "", textContent: "", hidden: false, disabled: false, children: [], dataset: {},
-      classList: { toggle() {} }, append(...children) { this.children.push(...children); }, replaceChildren(...children) { this.children = children; },
-      get options() { return this.children; }, focus() {} };
-  }
-  for (const [, id] of html.matchAll(/\bid="([^"]+)"/g)) elements.set(id, element());
-  const $ = id => { assert.ok(elements.has(id), `Missing DOM element ${id}`); return elements.get(id); };
-  const context = vm.createContext({
-    window: { DocumentModel: require("../plugin/model"), confirm: () => true, KaiPluginNotice: { attach: () => ({ show: message => messages.push(message), clear() {} }) },
-      kai: { async call(method, input) {
-        calls.push({ method, input });
-        if (method === "documents.list") return { documents: saved, errors: [] };
-        if (method === "models.list") return [];
-        if (method === "documents.get") return input.id === "first" ? { ...saved[0] } : new Promise(resolve => { resolveGet = resolve; });
-        if (method === "documents.save") return { ...input, revision: "saved-revision" };
-        throw Error(`Unexpected broker method ${method}`);
-      } },
-    },
-    document: { getElementById: $, createElement: element, querySelectorAll: selector => selector === "[data-action],#draft" ? [$("draft")] : [] },
-  });
-  vm.runInContext(source, context, { filename: "app.js" });
-  return { $, calls, messages, finishGet: () => resolveGet({ ...saved[1] }), async openFirst() { await flush(); await $("list").children[0].onclick(); } };
-}
-
-for (const [field, changed] of [["content", "Text typed while the next document loads"], ["title", "Title typed while the next document loads"]]) {
-  test(`delayed document switching preserves newer ${field} edits and the original save identity`, async () => {
-    const f = fixture(); await f.openFirst();
-    const switching = f.$("list").children[1].onclick();
-    f.$(field).value = changed; f.$("document-form").oninput();
-    f.finishGet(); await switching;
-    assert.equal(f.$(field).value, changed);
-    assert.equal(f.$(field === "content" ? "title" : "content").value, field === "content" ? "First document" : "First saved text");
-    assert.match(f.$("status").textContent, /Unsaved changes/);
-    assert.equal(f.calls.filter(call => call.method === "documents.save").length, 0);
-    f.$("document-form").onsubmit({ preventDefault() {}, submitter: f.$("save") }); await flush();
-    const write = f.calls.find(call => call.method === "documents.save");
-    assert.equal(write.input.id, "first"); assert.equal(write.input.revision, "first-revision"); assert.equal(write.input[field], changed);
-  });
-}
-
-test("a delayed document switch still opens the chosen document when no edits intervene", async () => {
-  const f = fixture(); await f.openFirst();
-  const switching = f.$("list").children[1].onclick(); f.finishGet(); await switching;
-  assert.equal(f.$("title").value, "Second document"); assert.equal(f.$("content").value, "Second saved text");
-  assert.match(f.$("status").textContent, /Saved/);
-});
+const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),fixture=require("./bridge-fixture");
+const root=path.join(__dirname,"../plugin"),source=fs.readFileSync(path.join(root,"bridge.js"),"utf8"),html=fs.readFileSync(path.join(root,"index.html"),"utf8"),app=fs.readFileSync(path.join(root,"app.js"),"utf8");
+test("original editor offers each selection action and its Apply, Discard and Stop controls",()=>{for(const action of ["improve","grammar","shorten","expand","continue"])assert.ok(html.includes(`data-act="${action}"`));for(const id of ["doc-list","doc-title","doc-body","doc-custom","doc-model","doc-apply","doc-discard","doc-suggest-stop"])assert.ok(html.includes(`id="${id}"`));assert.match(app,/doc\.target\.content !== \$\("doc-body"\)\.value/);assert.match(app,/generation !== doc\.generation \|\| version !== doc\.version/);});
+test("opening and autosaving retain the backend revision fence",async()=>{const f=fixture(source,async(method,input)=>method==="documents.get"?{id:"document1",title:"Original",content:"Text",revision:"original-revision"}:{...input,revision:"new-revision"});const loaded=await(await f.window.fetch("/core/docs/document1")).json();assert.equal(loaded.doc.id,"document1");await f.window.fetch("/core/docs",{method:"POST",body:JSON.stringify({id:"document1",title:"Changed",content:"New text"})});assert.equal(f.calls[1].method,"documents.save");assert.equal(f.calls[1].input.revision,"original-revision");await f.window.fetch("/core/docs",{method:"POST",body:JSON.stringify({id:"document1",title:"Changed again",content:"Newer text"})});assert.equal(f.calls[2].input.revision,"new-revision");});
+test("deleting from the original list retains native cancellation",async()=>{const f=fixture(source,async method=>method==="documents.get"?{id:"document1",revision:"revision1"}:{cancelled:true});const response=await f.window.fetch("/core/docs/document1",{method:"DELETE"});assert.deepEqual(await response.json(),{ok:false,cancelled:true});assert.equal(f.calls[1].input.revision,"revision1");});
+test("writing suggestions stream through the Documents broker only",async()=>{const f=fixture(source,async method=>method==="documents.ai"?{status:200,streamId:"draft1"}:method==="documents.poll"?{chunks:['data: {"choices":[{"delta":{"content":"Proposed wording"}}]}\n\n'],done:true}:{});const response=await f.window.fetch("/core/chat/completions",{method:"POST",body:JSON.stringify({model:"local",messages:[{role:"user",content:"Selected words"}]})});assert.match(await response.text(),/Proposed wording/);assert.equal(f.calls[0].method,"documents.ai");assert.equal(f.calls[0].input.messages[0].content,"Selected words");await assert.rejects(f.window.fetch("/core/wallet/send",{method:"POST",body:"{}"}),/Unsupported/);});
+test("aborted writing requests cancel their owned stream",async()=>{const controller=new AbortController();const f=fixture(source,async method=>{if(method==="documents.ai"){controller.abort();return{status:200,streamId:"draft1"};}return{cancelled:true};});await assert.rejects(f.window.fetch("/core/chat/completions",{method:"POST",body:'{"messages":[]}',signal:controller.signal}),{name:"AbortError"});assert.ok(f.calls.some(c=>c.method==="documents.cancel"&&c.input.streamId==="draft1"));});
