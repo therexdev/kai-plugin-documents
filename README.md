@@ -1,13 +1,32 @@
-# KAI Documents plugin
+# KAI Documents
 
-The original Documents writing workspace, installed separately in KAI Core. It retains the document rail, title and writing canvas, automatic saving, word count, model selector, and the original Improve, Fix grammar, Shorten, Expand, Continue and custom-instruction actions.
+Documents owns the complete writing workspace and its native service. The plugin contains document storage, revision checks, native text/Markdown import and export, AI suggestion streams, cancellation, and the editor UI. Core supplies only the documented Foundation API for shared model inference, desktop approvals and plugin lifecycle.
 
-Select a passage to revise only that passage, or leave it unselected to revise the document. Suggestions stream into the original preview with Apply, Discard and Stop controls. Generation does not modify the document. Apply updates the selected passage and autosaves; a suggestion cannot overwrite text edited after it began. Native text/Markdown import and export are also retained.
+The writing experience includes a document rail, autosave, word count, a local model selector, Improve, Fix grammar, Shorten, Expand, Continue and custom instructions. Selecting a passage applies changes only to that passage. Suggestions remain separate until Apply; Discard and Stop remain available. Generation and autosave checks prevent delayed work from changing another document or overwriting newer edits.
 
-Existing documents keep their original `core/docs` files, IDs and creation dates. Atomic saves retain a revision fence, reject concurrent changes and preserve unreadable files. Serial autosaves and generation checks prevent a delayed response from changing the wrong document when switching pages or typing during a save.
+## Trust and data
 
-The original renderer talks to its publisher-pinned Documents broker rather than an unrestricted HTTP API. The broker retains the original model streaming route while document reads and writes use guarded storage. It never exposes wallet keys or connected account credentials. Interface language follows the original Core preference.
+This is a **native plugin**. Installation explicitly grants full computer and application access. The renderer remains sandboxed, but the native service is trusted code, not an adversarial isolation boundary. Install native plugins only from publishers you trust.
 
-Run `npm test` for transport, revision and streaming cancellation tests. Core owns storage/inference integration tests and native sandboxed UI scenarios. Synthetic tests do not submit real model jobs or access user documents.
+Documents uses its own `api.plugin.dataDir/docs` directory. Foundation starts a new profile; this release does not read or migrate documents from the older app. Existing older files remain untouched. Saves retain a revision fence, use atomic replacement, preserve unknown metadata, and refuse unreadable, linked, oversized or stale records. The request budget is 10 MiB.
 
-Original UI source baseline: `therexdev/kaiapp` commit `34d17faa0526213b8fc0ac7a65aa7f2c186c6547`, the Documents portion of `ui/docs-view.js`, the `view-docs` section of `ui/index.html`, `ui/styles.css`, and `ui/product-experience.css`. The extracted renderer retains its original controls and behavior, with save/lifetime guards around asynchronous work.
+## Public Foundation integration
+
+- `models.list`, `api.models.request` and `api.models.chat` provide local inference.
+- `api.settings` stores plugin preferences; `api.desktop.confirm` owns destructive-action review.
+- The declared `kai.documents` service exposes `list`, `get`, `save` and `remove` to installed, authorized local plugins. Save/remove require revisions; remove still requires native confirmation. Remote jobs are denied.
+- No imports from the Core source tree, feature-specific Core broker, shared companion store or private publisher-only API are used.
+
+The entry point is `plugin/service/index.js`. The package has no external runtime dependencies. Native file dialogs use Electron, which the native runtime provides. All feature code is included before signing; nothing is installed from npm on the user's machine.
+
+Run `npm test`. After packing a new immutable release, run `node scripts/verify-package.js` to compare every signed file against the source and verify its publisher signature.
+
+## Foundation package publication
+
+Requires KAI Core **0.7.0 or later**, manifest schema 2/API 3 and native API v1. Source lives in `plugin/`, including its service and all runtime dependencies. Runtime installation never runs npm or dependency hooks.
+
+Before signing, install any author dependencies with `npm ci --ignore-scripts` when this repository has a lockfile, run `npm run build --if-present`, then `node scripts/verify-package.js --source` and `npm test`. The source-only check uses a temporary in-memory test signature; it does not claim a publisher release was signed.
+
+Pack the complete plugin using Core's `scripts/core/pack-plugin.js`, keeping the publisher private key outside every repository. Place the new immutable signed asset at `dist/<repository-name>-<manifest-version>.kaiplugin`, then run `node scripts/verify-package.js`. The release verifier checks the actual publisher signature and exact source/assets/dependency contents against the same package rules as Core. Its standalone format snapshot and SHA-256 provenance are under `scripts/package-format-v3*`; it never imports or executes submitted plugin code.
+
+CI tests source on `foundation-v1`, pull requests and `main` on Windows, macOS and Linux. It checks any signed asset present for the current version. Publication runs only from `main`, only when that exact signed asset exists, and only after every check passes. Existing release assets must match byte-for-byte and are never overwritten. Branch builds cannot publish releases. Native device/integration checks remain necessary before a release; unit tests do not replace them.

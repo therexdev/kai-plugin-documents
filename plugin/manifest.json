@@ -1,18 +1,25 @@
 {
-  "schema": 1,
-  "apiVersion": 2,
+  "schema": 2,
+  "apiVersion": 3,
   "id": "kai.documents",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": "Documents",
   "description": "The original local writing workspace with autosave, selection-aware AI edits, streamed suggestions, Apply/Discard/Stop, and native document import/export.",
   "entry": "index.html",
   "permissions": [
+    "native.execute",
     "models.read",
-    "documents.read",
-    "documents.write",
-    "documents.import",
-    "documents.export",
-    "documents.draft",
-    "desktop.preferences"
-  ]
+    "inference.local",
+    "storage.read",
+    "storage.write",
+    "desktop.preferences",
+    "services.provide",
+    "desktop.windows"
+  ],
+  "runtime": "native",
+  "service": "service/index.js",
+  "provides": [
+    "kai.documents"
+  ],
+  "consumes": []
 }

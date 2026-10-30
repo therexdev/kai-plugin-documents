@@ -1,6 +1,6 @@
 "use strict";
-// A transport adapter for the unchanged original workspace. Every operation
-// crosses its named, publisher-pinned broker; no renderer network access exists.
+// The sandboxed writing UI calls its own installed native service.
+// Shared inference goes through the public Foundation API.
 const $ = id => document.getElementById(id);
 const state = { alias: "" };
 let pickable = [];
