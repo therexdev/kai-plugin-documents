@@ -137,8 +137,15 @@ const DOC_ACTIONS = {
 function hideSuggest() {
   doc.abort?.abort(); doc.abort = null;
   $("doc-suggest").hidden = true;
+  $("doc-suggest").setAttribute("aria-busy", "false");
   $("doc-suggest-body").textContent = "";
+  $("doc-suggest-status").textContent = "";
   doc.target = null;
+}
+
+function suggestionStatus(message, tone = "") {
+  $("doc-suggest-status").textContent = message;
+  $("doc-suggest-status").dataset.tone = tone;
 }
 
 async function runDocAction(instruction, label) {
@@ -154,17 +161,26 @@ async function runDocAction(instruction, label) {
   const proposalTarget = doc.target;
 
   $("doc-suggest").hidden = false;
+  $("doc-suggest").setAttribute("aria-busy", "true");
   $("doc-suggest-label").textContent = label;
   KaiI18n.setText($("doc-suggest-target"), hasSel ? "on your selection" : "on the whole document");
   $("doc-suggest-body").textContent = "";
   $("doc-apply").disabled = true;
   $("doc-suggest-stop").hidden = false;
+  suggestionStatus("Waiting for the model…");
   doc.abort = new AbortController();
+  const operation = doc.abort;
+  let receivedText = false;
   try {
     const resp = await fetch("/core/chat/completions", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      signal: doc.abort.signal,
+      signal: operation.signal,
+      onProgress(stage) {
+        if (doc.target !== proposalTarget || receivedText || operation.signal.aborted) return;
+        if (stage === "waiting") suggestionStatus("Waiting for the model…");
+        else if (stage === "generating") suggestionStatus("Preparing your suggestion…");
+      },
       body: JSON.stringify({
         model: $("doc-model").value || state.alias,
         stream: true,
@@ -187,6 +203,8 @@ async function runDocAction(instruction, label) {
     for await (const { content } of sseDeltas(resp.body)) {
       if (!content) continue;
       if (doc.target !== proposalTarget) return;
+      operation.signal.throwIfAborted();
+      if (!receivedText) { receivedText = true; suggestionStatus("Writing suggestion…"); }
       acc += content;
       const now = performance.now();
       if (now - lastPaint > 80) {
@@ -195,12 +213,20 @@ async function runDocAction(instruction, label) {
       }
     }
     if (doc.target !== proposalTarget) return;
+    operation.signal.throwIfAborted();
+    if (!acc.trim()) throw Error("The model returned no text. Try the suggestion again or choose another model.");
     $("doc-suggest-body").textContent = acc.trim();
-    $("doc-apply").disabled = !acc.trim() || doc.target.content !== $("doc-body").value || doc.target.generation !== doc.generation;
+    const current = doc.target.content === $("doc-body").value && doc.target.generation === doc.generation;
+    $("doc-apply").disabled = !current;
+    suggestionStatus(current ? "Ready to review. Apply changes your document." : "The document changed. Generate a new suggestion before applying.");
   } catch (e) {
-    if (doc.target === proposalTarget && e.name !== "AbortError") KaiI18n.setText($("doc-suggest-body"), KaiI18n.message`Couldn't get a suggestion: ${e.message}`);
+    if (doc.target === proposalTarget) {
+      if (operation.signal.aborted || e.name === "AbortError") suggestionStatus("Stopped. No suggestion was applied.");
+      else suggestionStatus(`Couldn't get a suggestion: ${e.message}`, "error");
+      $("doc-apply").disabled = true;
+    }
   } finally {
-    if (doc.target === proposalTarget) { $("doc-suggest-stop").hidden = true; doc.abort = null; }
+    if (doc.target === proposalTarget) { $("doc-suggest-stop").hidden = true; $("doc-suggest").setAttribute("aria-busy", "false"); doc.abort = null; }
   }
 }
 
@@ -232,7 +258,7 @@ $("doc-apply").addEventListener("click", () => {
   saveDoc(true);
 });
 $("doc-discard").addEventListener("click", hideSuggest);
-$("doc-suggest-stop").addEventListener("click", () => doc.abort?.abort());
+$("doc-suggest-stop").addEventListener("click", () => { if (doc.abort) { suggestionStatus("Stopping…"); doc.abort.abort(); } });
 
 
 $("doc-import").addEventListener("click", async () => {

@@ -19,10 +19,11 @@
               <button class="doc-act" data-act="expand">Expand</button>
               <button class="doc-act" data-act="continue">Continue</button>
               <input id="doc-custom" placeholder="…or tell it what to do (e.g. “make this friendlier”)" />
-              <button id="doc-custom-go" class="doc-act">Go</button>
+              <button id="doc-custom-go" class="doc-act primary">Go</button>
             </div>
             <div id="doc-suggest" hidden>
               <div class="doc-suggest-head"><span id="doc-suggest-label">Suggestion</span><span id="doc-suggest-target" class="hint"></span></div>
+              <div id="doc-suggest-status" role="status" aria-live="polite"></div>
               <div id="doc-suggest-body"></div>
               <div class="doc-suggest-actions">
                 <button id="doc-apply" class="primary small">Apply</button>

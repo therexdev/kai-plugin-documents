@@ -6,7 +6,7 @@ const state = { alias: "" };
 let pickable = [];
 const esc2 = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const call = (method, input) => window.kai.call(method, input);
-async function pluginResponse(feature, result, signal) {
+async function pluginResponse(feature, result, signal, onProgress) {
   if (signal?.aborted) { if(result.streamId) await call(feature + ".cancel", {streamId: result.streamId}).catch(()=>{}); throw new DOMException("Stopped", "AbortError"); }
   if (!result.streamId) return new Response(typeof result.body === "string" ? result.body : JSON.stringify(result.body ?? {}), {status: result.status || 200, headers: result.headers || {"content-type":"application/json"}});
   let stopped = false, controller;
@@ -15,14 +15,22 @@ async function pluginResponse(feature, result, signal) {
   const body = new ReadableStream({
     start(c) { controller = c; signal?.addEventListener("abort", abort, {once:true}); if(signal?.aborted) abort(); },
     async pull(c) {
-      if(stopped)return;
       try {
-        const next=await call(feature+".poll",{streamId:result.streamId});
-        if(stopped)return;
-        for(const text of next.chunks||[])c.enqueue(new TextEncoder().encode(text));
-        if(next.error)throw Error(next.error);
-        if(next.done){stopped=true;signal?.removeEventListener("abort",abort);c.close();}
-        else if(!next.chunks?.length)await new Promise(resolve=>setTimeout(resolve,150));
+        // An empty native poll is not a completed pull. ReadableStream may
+        // otherwise leave reader.read() pending forever and never poll again.
+        while (!stopped) {
+          const next=await call(feature+".poll",{streamId:result.streamId});
+          if(stopped)return;
+          if (typeof onProgress === "function" && next.state) onProgress(next.state);
+          for(const text of next.chunks||[])c.enqueue(new TextEncoder().encode(text));
+          if(next.error){
+            if(next.done){stopped=true;signal?.removeEventListener("abort",abort);c.error(Error(next.error));return;}
+            throw Error(next.error);
+          }
+          if(next.done){stopped=true;signal?.removeEventListener("abort",abort);c.close();return;}
+          if(next.chunks?.length)return;
+          await new Promise(resolve=>setTimeout(resolve,150));
+        }
       } catch(error){if(!stopped){await cancel();c.error(error);}}
     },
     cancel
@@ -30,14 +38,20 @@ async function pluginResponse(feature, result, signal) {
   return new Response(body,{status:result.status||200,headers:result.headers||{"content-type":"text/event-stream"}});
 }
 async function* sseDeltas(body) {
+  if (!body) throw Error("The model returned no suggestion stream.");
   const decoder=new TextDecoder();let buffer="";
-  for await(const chunk of body){buffer+=decoder.decode(chunk,{stream:true});let end;
-    while((end=buffer.indexOf("\n\n"))>=0){const frame=buffer.slice(0,end);buffer=buffer.slice(end+2);
-      for(const line of frame.split("\n")){if(!line.startsWith("data: "))continue;const value=line.slice(6).trim();if(value==="[DONE]")return;
-        try{const event=JSON.parse(value);if(event.error)throw Error(event.error.message||event.error);yield{content:event.choices?.[0]?.delta?.content||"",model:event.model||null};}catch(error){if(error.name!=="SyntaxError")throw error;}
-      }
-    }
+  function frameEvent(frame) {
+    const data = frame.split("\n").filter(line => line.startsWith("data:")).map(line => line.slice(5).replace(/^ /, "")).join("\n").trim();
+    if (!data) return null;
+    if (data === "[DONE]") return { done: true };
+    let event; try { event = JSON.parse(data); } catch { throw Error("The model returned an invalid suggestion stream. Try again."); }
+    if(event.error)throw Error(event.error.message||event.error);
+    return {content:event.choices?.[0]?.delta?.content||"",model:event.model||null};
   }
+  for await(const chunk of body){buffer+=decoder.decode(chunk,{stream:true});buffer=buffer.replace(/\r\n/g,"\n");let end;
+    while((end=buffer.indexOf("\n\n"))>=0){const frame=buffer.slice(0,end);buffer=buffer.slice(end+2);const event=frameEvent(frame);if(event?.done)return;if(event)yield event;}
+  }
+  buffer+=decoder.decode(); const event=frameEvent(buffer.replace(/\r\n/g,"\n")); if(event&&!event.done)yield event;
 }
 
 const documentRevisions = new Map();
@@ -55,7 +69,7 @@ window.fetch = async (path, options = {}) => {
     else {if(!documentRevisions.has(id)){const d=await call("documents.get",{id});documentRevisions.set(id,d.revision);}const r=await call("documents.remove",{id,revision:documentRevisions.get(id)});body={ok:!r.cancelled,...r};}
   }
   else if(path==="/core/chat/completions"&&method==="POST") {
-    return pluginResponse("documents",await call("documents.ai",{...input,stream:true}),options.signal);
+    return pluginResponse("documents",await call("documents.ai",{...input,stream:true}),options.signal,options.onProgress);
   } else throw Error("Unsupported Documents operation");
   return new Response(JSON.stringify(body),{status:200,headers:{"content-type":"application/json"}});
 };

@@ -1,7 +1,9 @@
-# 0.3.0 — Foundation plugins
+# Documents 0.3.1
 
-Documents now owns its native engine, storage, import/export and streaming model adapter. It uses Foundation API v1 and package schema 2/API 3. The full writing UI remains available.
+AI suggestions now keep streaming through pauses before the first word and between chunks. Expand, Fix grammar and the other writing actions no longer stall when the model briefly has no output. Stop also cancels work while a model is preparing or waiting for another request, and errors leave the controls ready to retry.
 
-This is a native plugin with explicit full-computer trust. It starts with its own plugin data; older app documents are not read, moved or deleted. No private Core feature API or shared-profile migration is required.
+Writing status distinguishes waiting, generating, stopped, failed and completed work. Suggestions still require Apply before changing the document, and newer manual edits are protected.
 
-Tests cover standalone service calls, revisions, corrupt and oversized documents, streaming cancellation and shutdown, native import/export, remote-service denial and the existing editor interactions.
+Buttons now use consistent typography, padding, rounded corners and subtle gradients, including the writing toolbar, import/export, Apply/Discard and delete controls. The layout fits narrow windows without clipping the controls.
+
+Use KAI Core Beta 0.7.9 or later for the matching model queue, cancellation and preparation fixes. Saved documents remain in the existing plugin data folder.
