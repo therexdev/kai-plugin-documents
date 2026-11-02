@@ -276,6 +276,6 @@ $("doc-export").addEventListener("click", async () => {
   catch (error) { $("doc-saved").textContent = error.message; }
 });
 (async () => {
-  try { const preferences = await call("desktop.preferencesRead", {keys:["kai-interface-language"]}); if (preferences["kai-interface-language"]) KaiI18n.setLanguage(preferences["kai-interface-language"]); const models = await call("models.list", {}); pickable = models.filter(model => model.status === "ready").map(model => ({v:model.alias,label:model.label||model.alias})); state.alias = pickable[0]?.v || ""; await renderDocs(); }
+  try { await window.kaiLanguageReady;  const models = await call("models.list", {}); pickable = models.filter(model => model.status === "ready").map(model => ({v:model.alias,label:model.label||model.alias})); state.alias = pickable[0]?.v || ""; await renderDocs(); }
   catch (error) { $("doc-saved").textContent = error.message; }
 })();

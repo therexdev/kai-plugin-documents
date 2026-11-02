@@ -2,7 +2,7 @@
   "schema": 2,
   "apiVersion": 3,
   "id": "kai.documents",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "name": "Documents",
   "description": "The original local writing workspace with autosave, selection-aware AI edits, streamed suggestions, Apply/Discard/Stop, and native document import/export.",
   "entry": "index.html",
